@@ -63,26 +63,33 @@ def calcular_prediccion(gramatica, nt, primeros, siguientes):
     predicciones = {}
     for produccion in gramatica[nt]:
         pred = set()
-        primeros_prod = primeros_alfa(produccion, primeros)
-        if 'ε' in primeros_prod:
-            primeros_prod.remove('ε')
-            pred |= siguientes[nt]
-        pred |= primeros_prod
-        predicciones[produccion] = pred
+        nueva_produccion = list(produccion)
+
+        # Manejo de la recursividad
+        for i, simbolo in enumerate(produccion):
+            if simbolo == nt:
+                for produccion_recursiva in gramatica[nt]:
+                    if produccion_recursiva != produccion:
+                        nueva_produccion.pop(i)
+                        nueva_produccion[i:i] = produccion_recursiva
+                        break  # Añadido para limitar la recursión a una sola vez
+                break  # Añadido para evitar procesar múltiples ocurrencias del mismo NT en una producción
+
+        # Cálculo de los primeros y siguientes
+        for simbolo in nueva_produccion:
+            if simbolo in primeros:
+                pred |= primeros[simbolo]
+                pred.discard('ε')
+            elif simbolo != 'ε':
+                pred.add(simbolo)
+                break
+            else:
+                pred |= siguientes[nt]
+
+        predicciones[tuple(nueva_produccion)] = pred
+
     return predicciones
 
-def primeros_alfa(alfa, primeros):
-    primeros_alfa = set()
-    for simbolo in alfa:
-        if simbolo in primeros:
-            primeros_alfa |= primeros[simbolo]
-            if 'ε' not in primeros[simbolo]:
-                break
-        else:
-            primeros_alfa.add(simbolo)
-            break
-    return primeros_alfa
-
 for nt in gramatica:
-    pred = calcular_prediccion(gramatica, nt, conjunto_primeros, conjunto_siguientes)
+    pred = calcular_prediccion(gramatica.copy(), nt, conjunto_primeros, conjunto_siguientes)
     print("PRED(", nt, "):", pred)
